@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>La Tómbola de Ms Steph la Cachureca</title>
+  <style>
+    body {
+      text-align: center;
+      background: #222;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      font-size: 48px;
+      margin-top: 40px;
+      color: #ffcc00;
+    }
+    #number {
+      font-size: 120px;
+      margin-top: 40px;
+    }
+    .resultText {
+      font-size: 28px;
+      margin-top: 10px;
+    }
+    #winnerText {
+      font-size: 36px;
+      color: #00ffcc;
+      margin-top: 20px;
+      animation: blink 1s infinite;
+      display: none;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    button {
+      font-size: 24px;
+      padding: 15px 40px;
+      margin: 30px 15px;
+      cursor: pointer;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>La Tómbola de Ms Steph la Cachureca</h1>
+  <div id="number">0</div>
+
+  <div id="eliminated1" class="resultText"></div>
+  <div id="eliminated2" class="resultText"></div>
+  <div id="winnerText">The winning number is</div>
+
+  <button id="startBtn">Start</button>
+  <button id="stopBtn" disabled>Stop</button>
+  <button id="resetBtn" style="display:none;">Reset</button>
+
+  <canvas id="confettiCanvas"></canvas>
+
+  <script>
+    const WINNING_NUMBER = 30;
+
+    const numberDisplay = document.getElementById('number');
+    const winnerText = document.getElementById('winnerText');
+    const eliminated1 = document.getElementById('eliminated1');
+    const eliminated2 = document.getElementById('eliminated2');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let intervalId;
+    let currentStep = 0; // 0 = first round, 1 = second, 2 = winner, 3 = done
+    let usedNumbers = [];
+
+    function getRandomNumber(exclude = []) {
+      let num;
+      do {
+        num = Math.floor(Math.random() * 100) + 1;
+      } while (exclude.includes(num) || num === WINNING_NUMBER);
+      return num;
+    }
+
+    function startRaffle() {
+      if (currentStep >= 3) return; // Stop if already finished
+
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      intervalId = setInterval(() => {
+        numberDisplay.textContent = getRandomNumber();
+      }, 50);
+    }
+
+    function stopRaffle() {
+      clearInterval(intervalId);
+      stopBtn.disabled = true;
+
+      setTimeout(() => {
+        if (currentStep === 0) {
+          const eliminatedNum = getRandomNumber(usedNumbers);
+          usedNumbers.push(eliminatedNum);
+          numberDisplay.textContent = eliminatedNum;
+          eliminated1.textContent = `Eliminated: ${eliminatedNum}`;
+          currentStep = 1;
+          startBtn.disabled = false;
+
+        } else if (currentStep === 1) {
+          const eliminatedNum = getRandomNumber(usedNumbers);
+          usedNumbers.push(eliminatedNum);
+          numberDisplay.textContent = eliminatedNum;
+          eliminated2.textContent = `Eliminated: ${eliminatedNum}`;
+          currentStep = 2;
+          startBtn.disabled = false;
+
+        } else if (currentStep === 2) {
+          numberDisplay.textContent = WINNING_NUMBER;
+          winnerText.style.display = 'block';
+          launchConfetti();
+          currentStep = 3;
+          startBtn.disabled = true;
+          resetBtn.style.display = 'inline-block';
+        }
+      }, 500);
+    }
+
+    function resetRaffle() {
+      currentStep = 0;
+      usedNumbers = [];
+      numberDisplay.textContent = '0';
+      eliminated1.textContent = '';
+      eliminated2.textContent = '';
+      winnerText.style.display = 'none';
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      resetBtn.style.display = 'none';
+    }
+
+    startBtn.addEventListener('click', startRaffle);
+    stopBtn.addEventListener('click', stopRaffle);
+    resetBtn.addEventListener('click', resetRaffle);
+
+    // Confetti
+    const canvas = document.getElementById('confettiCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    let confetti = [];
+
+    function launchConfetti() {
+      confetti = [];
+      for (let i = 0; i < 300; i++) {
+        confetti.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          r: Math.random() * 6 + 4,
+          d: Math.random() * 50 + 5,
+          color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+          tilt: Math.random() * 10 - 10,
+          tiltAngle: 0
+        });
+      }
+      requestAnimationFrame(drawConfetti);
+    }
+
+    function drawConfetti() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      confetti.forEach(c => {
+        ctx.beginPath();
+        ctx.lineWidth = c.r;
+        ctx.strokeStyle = c.color;
+        ctx.moveTo(c.x + c.tilt, c.y);
+        ctx.lineTo(c.x + c.tilt + c.r / 2, c.y + c.tilt + c.r);
+        ctx.stroke();
+      });
+      updateConfetti();
+      requestAnimationFrame(drawConfetti);
+    }
+
+    function updateConfetti() {
+      confetti.forEach(c => {
+        c.y += Math.cos(c.d) + 2;
+        c.tiltAngle += 0.1;
+        c.tilt = Math.sin(c.tiltAngle) * 15;
+        if (c.y > canvas.height) {
+          c.y = -10;
+          c.x = Math.random() * canvas.width;
+        }
+      });
+    }
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+
+</body>
+</html>
